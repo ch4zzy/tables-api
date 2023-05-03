@@ -15,25 +15,8 @@ class TableViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def reservations(self, request, pk=None):
         table = get_object_or_404(Table, pk=pk)
-        reserved_dates = table.reservation_set.values_list("reserved_date", flat=True)
+        reserved_dates = Order.objects.filter(table=table).values_list("date", flat=True)
         return Response(reserved_dates)
-
-
-class OrderViewSet(viewsets.ModelViewSet):
-    queryset = Order.objects.all()
-    serializer_class = OrderSerializer
-
-    def create(self, request, *args, **kwargs):
-        table_id = request.data.get("table_id")
-        table = get_object_or_404(Table, id=table_id)
-        if Order.objects.filter(table=table, date=request.data.get('date')).exists():
-            return Response({'error': 'This table is already booked on this date'}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(table=table)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(detail=False, methods=["get"])
     def available_tables(self, request):
@@ -46,3 +29,22 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         else:
             return Response([])
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+
+    def create(self, request, *args, **kwargs):
+        table_id = request.data.get("table_id")
+        table = get_object_or_404(Table, id=table_id)
+        if Order.objects.filter(table=table, date=request.data.get("date")).exists():
+            return Response(
+                {"error": "This table is already booked on this date"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(table=table)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
