@@ -5,6 +5,13 @@ from django.db import models
 class Table(models.Model):
     number = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(8)])
     capacity = models.PositiveIntegerField(validators=[MinValueValidator(2), MaxValueValidator(16)])
+    SHAPE_CHOICES = [
+        ("rectangle", "Прямоугольный"),
+        ("oval", "Овальный"),
+    ]
+    shape = models.CharField(choices=SHAPE_CHOICES, default="rectangle", max_length=10)
+    width = models.DecimalField(max_digits=5, decimal_places=2)
+    length = models.DecimalField(max_digits=5, decimal_places=2)
 
 
 class Order(models.Model):

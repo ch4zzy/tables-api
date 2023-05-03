@@ -30,6 +30,21 @@ class TableViewSet(viewsets.ModelViewSet):
         else:
             return Response([])
 
+    @action(detail=False, methods=["get"])
+    def occupancy(self, request):
+        date_str = request.GET.get("date")
+        date = parse_date(date_str)
+        reserved_tables = Order.objects.filter(date=date).values_list("table", flat=True)
+        total_area = sum([table.width * table.length for table in Table.objects.all()])
+        occupied_area = sum(
+            [
+                order.table.width * order.table.length
+                for order in Order.objects.filter(id__in=reserved_tables)
+            ]
+        )
+        occupancy_percentage = round(occupied_area / total_area * 100, 2)
+        return Response({"occupancy": occupancy_percentage})
+
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
