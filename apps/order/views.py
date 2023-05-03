@@ -26,6 +26,9 @@ class OrderViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         table_id = request.data.get("table_id")
         table = get_object_or_404(Table, id=table_id)
+        if Order.objects.filter(table=table, date=request.data.get('date')).exists():
+            return Response({'error': 'This table is already booked on this date'}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(table=table)
@@ -37,7 +40,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         date_str = request.GET.get("date")
         if date_str:
             date = parse_date(date_str)
-            reserved_tables = Order.objects.filter(reserved_date=date).values_list("table", flat=True)
+            reserved_tables = Order.objects.filter(date=date).values_list("table", flat=True)
             available_tables = Table.objects.exclude(id__in=reserved_tables)
             serializer = TableSerializer(available_tables, many=True)
             return Response(serializer.data)
