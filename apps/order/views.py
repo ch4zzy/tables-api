@@ -10,17 +10,27 @@ from apps.order.serializer import OrderSerializer, TableSerializer
 
 
 class TableViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows tables to be viewed or edited.
+    """
+
     queryset = Table.objects.all()
     serializer_class = TableSerializer
 
     @action(detail=True, methods=["get"])
     def reservations(self, request, pk=None):
+        """
+        Return a list of reserved dates for a specific table.
+        """
         table = get_object_or_404(Table, pk=pk)
         reserved_dates = Order.objects.filter(table=table).values_list("date", flat=True)
         return Response(reserved_dates)
 
     @action(detail=False, methods=["get"])
     def available_tables(self, request):
+        """
+        Return a list of available tables for a specific date.
+        """
         date_str = request.GET.get("date")
         if date_str:
             date = parse_date(date_str)
@@ -33,6 +43,9 @@ class TableViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def occupancy(self, request):
+        """
+        Return the occupancy percentage for a specific date.
+        """
         date_str = request.GET.get("date")
         date = parse_date(date_str)
         reserved_tables = Order.objects.filter(date=date).values_list("table", flat=True)
@@ -48,10 +61,17 @@ class TableViewSet(viewsets.ModelViewSet):
 
 
 class OrderViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows orders to be viewed or edited.
+    """
+
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
 
     def create(self, request, *args, **kwargs):
+        """
+        Create a new order and send a confirmation email to the customer.
+        """
         table_id = request.data.get("table_id")
         table = get_object_or_404(Table, id=table_id)
         if Order.objects.filter(table=table, date=request.data.get("date")).exists():
