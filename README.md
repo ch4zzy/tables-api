@@ -1,7 +1,8 @@
-Restaurant API
+#Restaurant API
 This API allows you to manage tables and orders for a restaurant.
 
-Endpoints
+##Endpoints
+
 Tables
 GET /api/tables/: List all available tables.
 POST /api/tables/: Create a new table.
