@@ -1,3 +1,4 @@
+from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
@@ -57,9 +58,18 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response(
                 {"error": "This table is already booked on this date"}, status=status.HTTP_400_BAD_REQUEST
             )
+        customer_email = request.data.get("customer_email")
+        date_order = request.data.get("date")
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(table=table)
         headers = self.get_success_headers(serializer.data)
+        send_mail(
+            "Subject here",
+            f"Id {table_id}, Date {date_order}",
+            "test@example.com",
+            [customer_email],
+            fail_silently=False,
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
