@@ -1,4 +1,5 @@
 from django.core.mail import send_mail
+from django.db.models import F, Sum
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
@@ -7,6 +8,7 @@ from rest_framework.response import Response
 
 from apps.order.models import Order, Table
 from apps.order.serializer import OrderSerializer, TableSerializer
+from config.settings import HOST_EMAIL
 
 
 class TableViewSet(viewsets.ModelViewSet):
@@ -33,13 +35,13 @@ class TableViewSet(viewsets.ModelViewSet):
         """
         date_str = request.GET.get("date")
         if date_str:
-            date = parse_date(date_str)
-            reserved_tables = Order.objects.filter(date=date).values_list("table", flat=True)
-            available_tables = Table.objects.exclude(id__in=reserved_tables)
+            available_tables = Table.objects.exclude(
+                id__in=Order.objects.filter(date=parse_date(date_str)).values_list("table", flat=True)
+            )
             serializer = TableSerializer(available_tables, many=True)
             return Response(serializer.data)
         else:
-            return Response([])
+            return Response([], status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=False, methods=["get"])
     def occupancy(self, request):
@@ -47,17 +49,23 @@ class TableViewSet(viewsets.ModelViewSet):
         Return the occupancy percentage for a specific date.
         """
         date_str = request.GET.get("date")
-        date = parse_date(date_str)
-        reserved_tables = Order.objects.filter(date=date).values_list("table", flat=True)
-        total_area = sum([table.width * table.length for table in Table.objects.all()])
-        occupied_area = sum(
-            [
-                order.table.width * order.table.length
-                for order in Order.objects.filter(id__in=reserved_tables)
-            ]
-        )
-        occupancy_percentage = round(occupied_area / total_area * 100, 2)
-        return Response({"occupancy": occupancy_percentage})
+        if date_str:
+            date = parse_date(date_str)
+            reserved_tables = Order.objects.filter(date=date).values_list("table", flat=True)
+            total_area = Table.objects.aggregate(total_area=Sum(F("width") * F("length")))["total_area"]
+            occupied_area = Order.objects.filter(id__in=reserved_tables).aggregate(
+                occupied_area=Sum(F("table__width") * F("table__length"))
+            )["occupied_area"]
+            occupancy_percentage = round(occupied_area / total_area * 100, 2)
+            return Response(
+                {
+                    "occupancy": occupancy_percentage,
+                    "total_area": total_area,
+                    "occupied_area": occupied_area,
+                }
+            )
+        else:
+            return Response([], status=status.HTTP_404_NOT_FOUND)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -73,23 +81,26 @@ class OrderViewSet(viewsets.ModelViewSet):
         Create a new order and send a confirmation email to the customer.
         """
         table_id = request.data.get("table_id")
-        table = get_object_or_404(Table, id=table_id)
-        if Order.objects.filter(table=table, date=request.data.get("date")).exists():
-            return Response(
-                {"error": "This table is already booked on this date"}, status=status.HTTP_400_BAD_REQUEST
+        if table_id:
+            table = get_object_or_404(Table, id=table_id)
+            if Order.objects.filter(table=table, date=request.data.get("date")).exists():
+                return Response(
+                    {"error": "This table is already booked on this date"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(table=table)
+            headers = self.get_success_headers(serializer.data)
+            table_id = serializer.validated_data.get("table_id")
+            date_order = serializer.validated_data.get("date_order")
+            send_mail(
+                "Table order",
+                f"Id {table_id}, Date {date_order}",
+                HOST_EMAIL,
+                [serializer.validated_data.get("customer_email")],
+                fail_silently=False,
             )
-        customer_email = request.data.get("customer_email")
-        date_order = request.data.get("date")
-
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(table=table)
-        headers = self.get_success_headers(serializer.data)
-        send_mail(
-            "Subject here",
-            f"Id {table_id}, Date {date_order}",
-            "test@example.com",
-            [customer_email],
-            fail_silently=False,
-        )
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        else:
+            return Response([], status=status.HTTP_404_NOT_FOUND)
