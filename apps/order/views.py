@@ -1,5 +1,6 @@
 from django.core.mail import send_mail
 from django.db.models import F, Q, Sum
+from django.db.models import F, Q, Sum
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
@@ -37,8 +38,9 @@ class TableViewSet(viewsets.ModelViewSet):
         if not date_str:
             return Response([], status=status.HTTP_404_NOT_FOUND)
         else:
+            query = Q(date=parse_date(date_str))
             available_tables = Table.objects.exclude(
-                orders__date=parse_date(date_str)
+                id__in=Order.objects.filter(query).values_list("table__id", flat=True)
             )
             serializer = TableSerializer(available_tables, many=True)
             return Response(serializer.data)
