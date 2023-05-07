@@ -13,7 +13,7 @@ class Table(models.Model):
 
 
 class Order(models.Model):
-    table = models.ForeignKey(Table, on_delete=models.CASCADE)
+    table = models.ForeignKey(Table, on_delete=models.CASCADE, related_name="table")
     date = models.DateField()
     customer_name = models.CharField(max_length=50)
     customer_email = models.EmailField()
