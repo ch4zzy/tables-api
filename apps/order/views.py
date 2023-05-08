@@ -1,5 +1,5 @@
 from django.core.mail import send_mail
-from django.db.models import F, Sum
+from django.db.models import F, Q, Sum
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
@@ -34,14 +34,14 @@ class TableViewSet(viewsets.ModelViewSet):
         Return a list of available tables for a specific date.
         """
         date_str = request.GET.get("date")
-        if date_str:
+        if not date_str:
+            return Response([], status=status.HTTP_404_NOT_FOUND)
+        else:
             available_tables = Table.objects.exclude(
-                id__in=Order.objects.filter(date=parse_date(date_str)).values_list("table", flat=True)
+                orders__date=parse_date(date_str)
             )
             serializer = TableSerializer(available_tables, many=True)
             return Response(serializer.data)
-        else:
-            return Response([], status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=False, methods=["get"])
     def occupancy(self, request):
