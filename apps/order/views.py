@@ -38,9 +38,8 @@ class TableViewSet(viewsets.ModelViewSet):
         if not date_str:
             return Response([], status=status.HTTP_404_NOT_FOUND)
         else:
-            query = Q(date=parse_date(date_str))
             available_tables = Table.objects.exclude(
-                id__in=Order.objects.filter(query).values_list("table__id", flat=True)
+                orders__date=parse_date(date_str)
             )
             serializer = TableSerializer(available_tables, many=True)
             return Response(serializer.data)
