@@ -5,3 +5,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("apps.order.urls", namespace="api_order")),
 ]
+
+urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]
