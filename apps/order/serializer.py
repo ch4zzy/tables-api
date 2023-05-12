@@ -9,6 +9,10 @@ from apps.order.models import Order, Table
 
 
 class BaseSerializer(serializers.ModelSerializer):
+    """
+    Base serializer for common validation methods.
+    """
+
     def validate_format(self, value):
         """
         Validation date format
@@ -29,12 +33,20 @@ class BaseSerializer(serializers.ModelSerializer):
 
 
 class TableSerializer(BaseSerializer):
+    """
+    Serializer for Table model
+    """
+
     class Meta:
         model = Table
         fields = ["id", "number", "capacity"]
 
 
 class OrderSerializer(BaseSerializer):
+    """
+    Serializer for Order model
+    """
+
     date = serializers.DateField(format="%d-%m-%Y", input_formats=["%d-%m-%Y"])
 
     class Meta:
@@ -43,10 +55,18 @@ class OrderSerializer(BaseSerializer):
 
 
 class AvailableTablesSerializer(OrderSerializer):
+    """
+    Serializer for available tables
+    """
+
     class Meta(OrderSerializer.Meta):
         fields = ["id", "date"]
 
     def __init__(self, *args, **kwargs):
+        """
+        Initialize AvailableTablesSerializer instance.
+        Removes 'customer_name' and 'customer_email' fields from the serializer.
+        """
         super().__init__(*args, **kwargs)
         self.fields.pop("customer_name", None)
         self.fields.pop("customer_email", None)
