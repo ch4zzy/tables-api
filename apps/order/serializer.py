@@ -26,7 +26,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def validate_date(self, value):
         """
-        Validation date format
+        Validation date on yesterday day
         """
         if value < timezone.now().date():
             raise ValidationError("Date cannot be in the past.")
