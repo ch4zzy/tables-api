@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.validators import ValidationError
@@ -7,21 +8,14 @@ from rest_framework.validators import ValidationError
 from apps.order.models import Order, Table
 
 
-class TableSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Table
-        fields = ["id", "number", "capacity"]
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    date = serializers.DateField(format="%d-%m-%Y", input_formats=["%d-%m-%Y"])
-
+class BaseSerializer(serializers.ModelSerializer):
     def validate_format(self, value):
         """
         Validation date format
         """
         if value != datetime.strptime(value, "%d-%m-%Y").date():
-            raise ValidationError("Invalid date format. Please use the format 'dd-mm-yyyy'.")
+            if settings.DEBUG:
+                raise ValidationError("Invalid date format. Please use the format 'dd-mm-yyyy'.")
         return value
 
     def validate_date(self, value):
@@ -29,8 +23,19 @@ class OrderSerializer(serializers.ModelSerializer):
         Validation date on yesterday day
         """
         if value < timezone.now().date():
-            raise ValidationError("Date cannot be in the past.")
+            if settings.DEBUG:
+                raise ValidationError("Date cannot be in the past.")
         return value
+
+
+class TableSerializer(BaseSerializer):
+    class Meta:
+        model = Table
+        fields = ["id", "number", "capacity"]
+
+
+class OrderSerializer(BaseSerializer):
+    date = serializers.DateField(format="%d-%m-%Y", input_formats=["%d-%m-%Y"])
 
     class Meta:
         model = Order
