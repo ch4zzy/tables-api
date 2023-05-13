@@ -15,7 +15,7 @@ POST /api/orders/: Create a new order.
 ```
 ### Available tables
 ```
-GET /api/available_tables/?date=YYYY-MM-DD: List all available tables for a given date.
+GET /api/available_tables/?date=DD-MM-YYYY: List all available tables for a given date.
 ```
 ### Table reservations
 ```
@@ -23,5 +23,5 @@ GET /api/tables/<id>/reservations/: List all reservations for a table with ID <i
 ```
 ### Occupancy
 ```
-GET /api/tables/occupancy/?date=YYYY-MM-DD: Occupancy for date
+GET /api/tables/occupancy/?date=DD-MM-YYYY: Occupancy for date
 ```
