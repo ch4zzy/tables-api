@@ -24,4 +24,3 @@ GET /api/tables/<id>/reservations/: List all reservations for a table with ID <i
 ### Occupancy
 ```
 GET /api/tables/occupancy/?date=DD-MM-YYYY: Occupancy for date
-```
